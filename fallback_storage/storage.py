@@ -49,6 +49,7 @@ class FallbackStorage(Storage):
                 raise ImproperlyConfigured("The setting `FALLBACK_STORAGES` is "
                                            "either missing or empty")
         self.backend_classes = backends
+        self.in_data_migration = getattr(settings, "FALLBACK_DATA_MIGRATION", False)
 
     def get_backends(self):
         for backend_class in self.backend_classes:
@@ -78,23 +79,22 @@ class FallbackStorage(Storage):
 
     def exists(self, *args, **kwargs):
         exceptions = {}
-        return_values = []
 
         for backend_class, backend_method in self.get_backend_methods('exists'):
             try:
-                return_values.append(backend_method(*args, **kwargs))
+                result = backend_method(*args, **kwargs)
+                if result:
+                    return True
             except Exception as e:
                 exceptions[backend_class] = e
                 continue
 
-        if return_values:
-            return any(return_values)
-        elif exceptions:
+        if exceptions:
             if len(exceptions) == 1:
                 raise exceptions[0]
             raise Exception(concatenate_exceptions(exceptions))
         else:
-            raise AttributeError("No backend found with the method `exists`")
+            return False
 
     def listdir(self, *args, **kwargs):
         exceptions = {}
@@ -120,26 +120,62 @@ class FallbackStorage(Storage):
             raise AttributeError("No backend found with the method `listdir`")
 
     def url(self, name):
-        exceptions = {}
-
-        for backend_class, backend in self.get_backends():
-            if not hasattr(backend, 'url') or not hasattr(backend, 'exists'):
-                continue
-
-            if not backend.exists(name):
-                continue
-            try:
-                return backend.url(name)
-            except Exception as e:
-                exceptions[backend_class] = e
-                continue
-        if exceptions:
-            if len(exceptions) == 1:
-                raise exceptions[0]
-            raise Exception(concatenate_exceptions(exceptions))
+        if self.in_data_migration:
+            return fallback_method("url")(self, name)
         else:
-            last_backend = get_storage_class(self.backend_classes[-1])()
-            try:
-                return last_backend.url(name)
-            except AttributeError:
-                raise AttributeError("No backend found with the method `url`")
+            exceptions = {}
+
+            for backend_class, backend in self.get_backends():
+                if not hasattr(backend, 'url') or not hasattr(backend, 'exists'):
+                    continue
+
+                if not backend.exists(name):
+                    continue
+                try:
+                    return backend.url(name)
+                except Exception as e:
+                    exceptions[backend_class] = e
+                    continue
+            if exceptions:
+                if len(exceptions) == 1:
+                    raise exceptions[0]
+                raise Exception(concatenate_exceptions(exceptions))
+            else:
+                last_backend = get_storage_class(self.backend_classes[-1])()
+                try:
+                    return last_backend.url(name)
+                except AttributeError:
+                    raise AttributeError("No backend found with the method `url`")
+
+    def open(self, name, mode='rb'):
+        if self.in_data_migration:
+            exceptions = {}
+            result = None
+
+            for i, (backend_class, backend_method) in enumerate(self.get_backend_methods('open')):
+                try:
+                    result = backend_method(name, mode=mode)
+                    if result:
+                        if self.in_data_migration and i > 0:
+                            # We have a file that isn't in the primary backend, but some other backend
+                            # Fetch the data a second time since the data mode might not be 'r', and
+                            # the returned content file might not be re-entrant.
+                            try:
+                                second_result = backend_method(name)
+                                if second_result:
+                                    self.save(name, second_result)
+                            except Exception as e:
+                                pass  # TODO - I probably should log this...
+                        return result
+                except Exception as e:
+                    exceptions[backend_class] = e
+                    continue
+
+            if exceptions:
+                if len(exceptions) == 1:
+                    raise exceptions[0]
+                raise Exception(concatenate_exceptions(exceptions))
+            else:
+                return result
+        else:
+            return fallback_method("open")(self, name, mode=mode)

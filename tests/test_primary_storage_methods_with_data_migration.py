@@ -57,7 +57,7 @@ def filesystemstorage(tmpdir, settings):
         'django.core.files.storage.FileSystemStorage',
     )
 )
-def test_storage_fixtures(inmemorystorage, filesystemstorage, settings, storage_backend):
+def test_storage_fixtures(filesystemstorage, inmemorystorage, settings, storage_backend):
     """
     Sanity check that the storage fixtures correctly patch the backends.
     """
@@ -78,16 +78,30 @@ def test_storage_fixtures(inmemorystorage, filesystemstorage, settings, storage_
     assert 'test' in contents
 
 
-def test_fallback_for_open_operations(inmemorystorage, filesystemstorage):
+def test_fallback_for_open_operations(inmemorystorage, filesystemstorage, settings):
+    settings.FALLBACK_DATA_MIGRATION = True
     inmemorystorage.save('bar.txt', StringIO('test-bar'))
     filesystemstorage.save('foo.txt', StringIO('test-foo'))
 
     backend = get_storage_class()()
 
+    assert inmemorystorage.exists('bar.txt')
+    assert not inmemorystorage.exists('foo.txt')
+
+    assert filesystemstorage.exists('foo.txt')
+    assert not filesystemstorage.exists('bar.txt')
+
     foo_file = backend.open('foo.txt')
     assert 'test-foo' in foo_file.read()
     bar_file = backend.open('bar.txt')
     assert 'test-bar' in bar_file.read()
+
+    assert inmemorystorage.exists('bar.txt')
+    # This is the actual new behavior due to the data-migration flag being turned on
+    assert inmemorystorage.exists('foo.txt')
+
+    assert filesystemstorage.exists('foo.txt')
+    assert not filesystemstorage.exists('bar.txt')
 
 
 def test_fallback_for_save_operations(inmemorystorage, filesystemstorage):
@@ -160,7 +174,8 @@ def test_fallback_for_size(inmemorystorage, filesystemstorage):
     assert backend.size('bar.txt') == bar_size
 
 
-def test_fallback_for_url(inmemorystorage, filesystemstorage):
+def test_fallback_for_url(inmemorystorage, filesystemstorage, settings):
+    settings.FALLBACK_DATA_MIGRATION = True
     inmemorystorage.save('bar.txt', StringIO('test-bar'))
     filesystemstorage.save('foo.txt', StringIO('test-foo'))
 
@@ -171,13 +186,14 @@ def test_fallback_for_url(inmemorystorage, filesystemstorage):
     backend = get_storage_class()()
 
     assert backend.url('bar.txt') == 'http://www.example.com/media/bar.txt'
-    assert backend.url('foo.txt') == '/media/foo.txt'
+    assert backend.url('foo.txt') == 'http://www.example.com/media/foo.txt'
 
     backend.save('foo.txt', StringIO('test-in-memory-foo'))
     assert backend.url('foo.txt') == 'http://www.example.com/media/foo.txt'
 
 
-def test_fallback_url_for_missing_file(inmemorystorage, filesystemstorage):
+def test_fallback_url_for_missing_file(inmemorystorage, filesystemstorage, settings):
+    settings.FALLBACK_DATA_MIGRATION = True
     backend = get_storage_class()()
 
-    assert backend.url('foo.txt') == '/media/foo.txt'
+    assert backend.url('foo.txt') == 'http://www.example.com/media/foo.txt'
