@@ -60,6 +60,25 @@ Installation
           "storages.backends.s3boto.S3BotoStorage",
       )
 
+4. Optionally, you can set:
+
+   .. code-block:: python
+
+       # settings.py
+       FALLBACK_DATA_MIGRATION = True
+
+   This will put FallbackStorage into a **Data Migration** mode, where it
+   will copy accessed files to the first entry in ``FALLBACK_STORAGES``
+   that can store them.
+
+   A scenario where this might be useful would be if you changed data centers,
+   and your system's access to your new data center's storage is much faster than
+   accessing your old data center's storage, but you have not yet moved all data
+   over to the new data center. Any data that is being accessed by your users will
+   be migrated to the new data center upon access, and you can have a process that
+   is going through moving all of the rest of the data while you are still serving
+   your users.
+
 API
 ---
 
@@ -98,10 +117,24 @@ The following methods behave somewhat specially.
 
 * **FallbackStorage.listdir(path)**:
 
-  Will return the set of all directories and files in all of the storage backents.
+  Will return the set of all directories and files in all of the storage backends.
 
 * **FallbackStorage.url(name)**:
 
-  When computing a url, FallbackStorage first checks if the file exists.  If
+  If you **have not** set ``FALLBACK_DATA_MIGRATION`` to be ``True``, then
+  when computing a url, FallbackStorage first checks if the file exists.  If
   the file exists in none of the storage backends, the last backend is used to
   compute the file name.
+
+  If you **do have** ``FALLBACK_DATA_MIGRATION`` set to ``True``, then the
+  returned url will be the first successful response from the defined ``FALLBACK_STORAGES``.
+
+* **FallbackStorage.open(name, mode='rb')**:
+
+  FallbackStorage will return the first successful response from the
+  defined ``FALLBACK_STORAGES``.
+
+  If you have ``FALLBACK_DATA_MIGRATION`` set to ``True``, then
+  it will first call **FallbackStorage.save()** on the content of
+  the file to save it to the first ``FALLBACK_STORAGES`` entry
+  that will accept it.
