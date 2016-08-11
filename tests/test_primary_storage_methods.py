@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 import functools
 import six
 
-from six.moves import StringIO
+from io import BytesIO
 
 import pytest
 
@@ -68,7 +68,7 @@ def test_storage_fixtures(inmemorystorage, filesystemstorage, settings, storage_
     assert not storage_a.exists('foo.txt')
     assert not storage_b.exists('foo.txt')
 
-    storage_a.save('foo.txt', StringIO('test'))
+    storage_a.save('foo.txt', BytesIO(b'test'))
 
     assert storage_b.exists('foo.txt')
     fb = storage_b.open('foo.txt')
@@ -79,31 +79,31 @@ def test_storage_fixtures(inmemorystorage, filesystemstorage, settings, storage_
 
 
 def test_fallback_for_open_operations(inmemorystorage, filesystemstorage):
-    inmemorystorage.save('bar.txt', StringIO('test-bar'))
-    filesystemstorage.save('foo.txt', StringIO('test-foo'))
+    inmemorystorage.save('bar.txt', BytesIO(b'test-bar'))
+    filesystemstorage.save('foo.txt', BytesIO(b'test-foo'))
 
     backend = get_storage_class()()
 
     foo_file = backend.open('foo.txt')
-    assert 'test-foo' in foo_file.read()
+    assert b'test-foo' in foo_file.read()
     bar_file = backend.open('bar.txt')
-    assert 'test-bar' in bar_file.read()
+    assert b'test-bar' in bar_file.read()
 
 
 def test_fallback_for_save_operations(inmemorystorage, filesystemstorage):
     backend = get_storage_class()()
-    backend.save('foo.txt', StringIO('test'))
+    backend.save('foo.txt', BytesIO(b'test'))
 
     assert inmemorystorage.exists('foo.txt')
     assert not filesystemstorage.exists('foo.txt')
 
     f = inmemorystorage.open('foo.txt')
-    assert 'test' in f.read()
+    assert b'test' in f.read()
 
 
 def test_fallback_for_exists_operations(inmemorystorage, filesystemstorage):
-    inmemorystorage.save('bar.txt', StringIO('test-bar'))
-    filesystemstorage.save('foo.txt', StringIO('test-foo'))
+    inmemorystorage.save('bar.txt', BytesIO(b'test-bar'))
+    filesystemstorage.save('foo.txt', BytesIO(b'test-foo'))
 
     backend = get_storage_class()()
 
@@ -112,8 +112,8 @@ def test_fallback_for_exists_operations(inmemorystorage, filesystemstorage):
 
 
 def test_fallback_for_deletion(inmemorystorage, filesystemstorage):
-    inmemorystorage.save('foo.txt', StringIO('test-foo-b'))
-    filesystemstorage.save('foo.txt', StringIO('test-foo-a'))
+    inmemorystorage.save('foo.txt', BytesIO(b'test-foo-b'))
+    filesystemstorage.save('foo.txt', BytesIO(b'test-foo-a'))
 
     backend = get_storage_class()()
 
@@ -132,8 +132,8 @@ def test_fallback_for_deletion(inmemorystorage, filesystemstorage):
 
 
 def test_fallback_for_listdir(inmemorystorage, filesystemstorage):
-    inmemorystorage.save('bar.txt', StringIO('test-bar'))
-    filesystemstorage.save('foo.txt', StringIO('test-foo'))
+    inmemorystorage.save('bar.txt', BytesIO(b'test-bar'))
+    filesystemstorage.save('foo.txt', BytesIO(b'test-foo'))
 
     backend = get_storage_class()()
 
@@ -145,14 +145,14 @@ def test_fallback_for_listdir(inmemorystorage, filesystemstorage):
 
 
 def test_fallback_for_size(inmemorystorage, filesystemstorage):
-    inmemorystorage.save('bar.txt', StringIO('test-0'))
-    filesystemstorage.save('foo.txt', StringIO('test-01234'))
+    inmemorystorage.save('bar.txt', BytesIO(b'test-0'))
+    filesystemstorage.save('foo.txt', BytesIO(b'test-01234'))
 
     foo_size = filesystemstorage.size('foo.txt')
     bar_size = inmemorystorage.size('bar.txt')
 
     # this one should not get accessed
-    filesystemstorage.save('bar.txt', StringIO('test-0123456789'))
+    filesystemstorage.save('bar.txt', BytesIO(b'test-0123456789'))
 
     backend = get_storage_class()()
 
@@ -161,8 +161,8 @@ def test_fallback_for_size(inmemorystorage, filesystemstorage):
 
 
 def test_fallback_for_url(inmemorystorage, filesystemstorage):
-    inmemorystorage.save('bar.txt', StringIO('test-bar'))
-    filesystemstorage.save('foo.txt', StringIO('test-foo'))
+    inmemorystorage.save('bar.txt', BytesIO(b'test-bar'))
+    filesystemstorage.save('foo.txt', BytesIO(b'test-foo'))
 
     # sanity check
     assert inmemorystorage.url('bar.txt') == 'http://www.example.com/media/bar.txt'
@@ -173,7 +173,7 @@ def test_fallback_for_url(inmemorystorage, filesystemstorage):
     assert backend.url('bar.txt') == 'http://www.example.com/media/bar.txt'
     assert backend.url('foo.txt') == '/media/foo.txt'
 
-    backend.save('foo.txt', StringIO('test-in-memory-foo'))
+    backend.save('foo.txt', BytesIO(b'test-in-memory-foo'))
     assert backend.url('foo.txt') == 'http://www.example.com/media/foo.txt'
 
 
