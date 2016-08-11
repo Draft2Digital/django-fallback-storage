@@ -14,7 +14,7 @@ version = fallback_storage.__version__
 
 readme = open('README.rst').read()
 
-requirements = [str(req.req) for req in parse_requirements('requirements.txt')]
+requirements = [str(req.req) for req in parse_requirements('requirements.txt', session=False)]
 
 setup(
     name='django-fallback-storage',

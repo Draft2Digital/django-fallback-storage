@@ -34,31 +34,30 @@ through them for each request until one of them returns a successful response.
 Installation
 ------------
 
-1. Install the package::
+1. Install the package:
 
    .. code-block:: bash
-   
-      $ pip install django-fallback-storage
+
+       $ pip install django-fallback-storage
 
 2. Set ``fallback_storage.storage.FallbackStorage`` as your desired storage
-   backend.::
+   backend:
 
    .. code-block:: python
 
-      # settings.py
-      DEFAULT_FILE_STORAGE = "fallback_storage.storage.FallbackStorage"
+       # settings.py
+       DEFAULT_FILE_STORAGE = "fallback_storage.storage.FallbackStorage"
 
-3. Declare what storage backends fallback storage should use.::
+3. Declare what storage backends fallback storage should use:
 
    .. code-block:: python
 
-      # All operations will be tried first on `FileSystemStorage` and then on
-      # `S3BotoStorage`.
+      # All operations will be tried first on `FileSystemStorage`
+      # and then on `S3BotoStorage`.
       FALLBACK_STORAGES = (
           "django.core.files.storage.FileSystemStorage",
           "storages.backends.s3boto.S3BotoStorage",
       )
-
 
 API
 ---
@@ -92,15 +91,15 @@ successful response.
 
 The following methods behave somewhat specially.
 
-* **FallbackStorage.exists(name)**::
+* **FallbackStorage.exists(name)**:
 
   Will return ``True`` if the file exists in *any* of the storage backends.
 
-* **FallbackStorage.listdir(path)**::
+* **FallbackStorage.listdir(path)**:
 
   Will return the set of all directories and files in all of the storage backents.
 
-* **FallbackStorage.url(name)**::
+* **FallbackStorage.url(name)**:
 
   When computing a url, FallbackStorage first checks if the file exists.  If
   the file exists in none of the storage backends, the last backend is used to
