@@ -157,9 +157,10 @@ class FallbackStorage(Storage):
                     result = backend_method(name, mode=mode)
                     if result:
                         if self.in_data_migration and i > 0:
-                            # We have a file that isn't in the primary backend, but some other backend
-                            # Fetch the data a second time since the data mode might not be 'r', and
-                            # the returned content file might not be re-entrant.
+                            # We have a file that isn't in the primary backend, but
+                            # some other backend fetch the data a second time since
+                            # the data mode might not be 'r', and the returned content
+                            # file might not be re-entrant.
                             try:
                                 second_result = backend_method(name)
                                 if second_result:
