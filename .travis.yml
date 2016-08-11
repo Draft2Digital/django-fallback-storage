@@ -1,6 +1,7 @@
 language: python
 python:
   - "2.7"
+  - "3.4"
 env:
   global:
     - PIP_DOWNLOAD_CACHE=$HOME/.pip_cache
@@ -12,7 +13,7 @@ env:
     - TOX_ENV=py33-dj16,
     - TOX_ENV=py33-dj17,
     - TOX_ENV=py34-dj17,
-#    - TOX_ENV=py35-dj18,
+    - TOX_ENV=py34-dj18,
     - TOX_ENV=flake8
 cache:
   directories:
