@@ -2,11 +2,12 @@
 django-fallback-storage
 =============================
 
-.. image:: https://badge.fury.io/py/django-fallback-storage.png
-    :target: https://badge.fury.io/py/django-fallback-storage
+..
+    .. image:: https://badge.fury.io/py/django-fallback-storage.png
+        :target: https://badge.fury.io/py/django-fallback-storage
 
-.. image:: https://travis-ci.org/simpleenergy/django-fallback-storage.png?branch=master
-    :target: https://travis-ci.org/simpleenergy/django-fallback-storage
+.. image:: https://travis-ci.org/Draft2Digital/django-fallback-storage.png?branch=master
+    :target: https://travis-ci.org/Draft2Digital/django-fallback-storage
 
 ``django-fallback-storage`` allows for the use of multiple storage engines at
 the same time.  It works by iterating through the declared storage backends
