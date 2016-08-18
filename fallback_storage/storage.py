@@ -11,6 +11,7 @@ from django.core.files.storage import (
 
 logger = logging.getLogger(__name__)
 
+
 def concatenate_exceptions(exceptions):
     return '\n'.join((
         "{0}: {1}".format(b, e) for e, b in exceptions.items()
@@ -181,10 +182,11 @@ class FallbackStorage(Storage):
                                     second_result = backend_method(name)
                                     if second_result:
                                         self.__save_to_primary_backend(name, second_result)
-                                except Exception as e:
-                                    logger.exception(("Unable to save file into the "
-                                                      "primary backend when fetched from other backend. "
-                                                      "Mode='{mode}', name='{name}'").format(mode=mode, name=name))
+                                except Exception:
+                                    message = ("Unable to save file into the "
+                                               "primary backend when fetched from other "
+                                               "backend. Mode='{mode}', name='{name}'")
+                                    logger.exception(message.format(mode=mode, name=name))
                         return result
                 except Exception as e:
                     exceptions[backend_class] = e
@@ -208,6 +210,7 @@ class FallbackStorage(Storage):
         try:
             backend = self.get_primary_backend()
             return backend.save(name, file_obj)
-        except Exception as e:
-            message = "Unable to save file into the primary backend when fetched from other backend. Name='{name}'"
+        except Exception:
+            message = "Unable to save file into the primary backend " \
+                      "when fetched from other backend. Name='{name}'"
             logger.exception(message.format(name=name))
