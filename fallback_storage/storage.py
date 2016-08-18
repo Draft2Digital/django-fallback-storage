@@ -1,5 +1,7 @@
+from io import BytesIO
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.core.files.base import ContentFile
 from django.core.files.storage import (
     Storage,
     get_storage_class,
@@ -158,15 +160,21 @@ class FallbackStorage(Storage):
                     if result:
                         if self.in_data_migration and i > 0:
                             # We have a file that isn't in the primary backend, but
-                            # some other backend fetch the data a second time since
-                            # the data mode might not be 'r', and the returned content
-                            # file might not be re-entrant.
-                            try:
-                                second_result = backend_method(name)
-                                if second_result:
-                                    self.save(name, second_result)
-                            except Exception as e:
-                                pass  # TODO - I probably should log this...
+                            # some other backend.
+                            if mode == 'rb':
+                                content = result.read()
+                                result = ContentFile(content, name=name)
+                                self.save(name, BytesIO(content))
+                            else:
+                                # Fetch the data a second time since
+                                # the data isn't 'rb', and the returned content
+                                # file might not be re-entrant.
+                                try:
+                                    second_result = backend_method(name)
+                                    if second_result:
+                                        self.save(name, second_result)
+                                except Exception as e:
+                                    pass  # TODO - I probably should log this...
                         return result
                 except Exception as e:
                     exceptions[backend_class] = e
