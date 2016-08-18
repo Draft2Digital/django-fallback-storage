@@ -62,7 +62,7 @@ class FallbackStorage(Storage):
             yield backend_class, backend
 
     def get_primary_backend(self):
-        backend_class, backend = self.get_backends().next()
+        backend_class, backend = next(self.get_backends())
         return backend
 
     def get_backend_methods(self, method_name):
