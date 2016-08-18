@@ -1,3 +1,4 @@
+import logging
 from io import BytesIO
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -7,6 +8,8 @@ from django.core.files.storage import (
     get_storage_class,
 )
 
+
+logger = logging.getLogger(__name__)
 
 def concatenate_exceptions(exceptions):
     return '\n'.join((
@@ -57,6 +60,10 @@ class FallbackStorage(Storage):
         for backend_class in self.backend_classes:
             backend = get_storage_class(backend_class)()
             yield backend_class, backend
+
+    def get_primary_backend(self):
+        backend_class, backend = self.get_backends().next()
+        return backend
 
     def get_backend_methods(self, method_name):
         for backend_class, backend in self.get_backends():
@@ -161,20 +168,23 @@ class FallbackStorage(Storage):
                         if self.in_data_migration and i > 0:
                             # We have a file that isn't in the primary backend, but
                             # some other backend.
-                            if mode == 'rb':
+                            if mode in ['rb', 'br']:
                                 content = result.read()
                                 result = ContentFile(content, name=name)
-                                self.save(name, BytesIO(content))
+                                # Save the file to move it into the primary backend
+                                self.__save_to_primary_backend(name, BytesIO(content))
                             else:
-                                # Fetch the data a second time since
-                                # the data isn't 'rb', and the returned content
-                                # file might not be re-entrant.
+                                # Fetch the data a second time since the mode
+                                # isn't 'rb', and I'm not sure the returned
+                                # file is re-entrant.
                                 try:
                                     second_result = backend_method(name)
                                     if second_result:
-                                        self.save(name, second_result)
+                                        self.__save_to_primary_backend(name, second_result)
                                 except Exception as e:
-                                    pass  # TODO - I probably should log this...
+                                    logger.exception(("Unable to save file into the "
+                                                      "primary backend when fetched from other backend. "
+                                                      "Mode='{mode}', name='{name}'").format(mode=mode, name=name))
                         return result
                 except Exception as e:
                     exceptions[backend_class] = e
@@ -188,3 +198,16 @@ class FallbackStorage(Storage):
                 return result
         else:
             return fallback_method("open")(self, name, mode=mode)
+
+    def __save_to_primary_backend(self, name, file_obj):
+        # (str, django.core.files.base.File) -> Optional[str]
+        """
+        Copy the file to the primary backend for future retrievals and return the name.
+        If this isn't able to do so, it will log the exception and return None.
+        """
+        try:
+            backend = self.get_primary_backend()
+            return backend.save(name, file_obj)
+        except Exception as e:
+            message = "Unable to save file into the primary backend when fetched from other backend. Name='{name}'"
+            logger.exception(message.format(name=name))
