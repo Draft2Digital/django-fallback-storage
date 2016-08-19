@@ -175,18 +175,10 @@ class FallbackStorage(Storage):
                                 # Save the file to move it into the primary backend
                                 self.__save_to_primary_backend(name, BytesIO(content))
                             else:
-                                # Fetch the data a second time since the mode
-                                # isn't 'rb', and I'm not sure the returned
-                                # file is re-entrant.
-                                try:
-                                    second_result = backend_method(name)
-                                    if second_result:
-                                        self.__save_to_primary_backend(name, second_result)
-                                except Exception:
-                                    message = ("Unable to save file into the "
-                                               "primary backend when fetched from other "
-                                               "backend. Mode='{mode}', name='{name}'")
-                                    logger.exception(message.format(mode=mode, name=name))
+                                message = "Currently Data Migration is only implemented " \
+                                          "for files being read in binary mode. " \
+                                          "Mode='{mode}', name='{name}'"
+                                raise NotImplementedError(message.format(mode=mode, name=name))
                         return result
                 except Exception as e:
                     exceptions[backend_class] = e
