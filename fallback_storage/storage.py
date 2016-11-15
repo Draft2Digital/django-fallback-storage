@@ -35,7 +35,7 @@ def fallback_method(method_name):
 
         if exceptions:
             if len(exceptions) == 1:
-                raise exceptions[0]
+                raise exceptions[exceptions.keys()[0]]
             raise Exception(concatenate_exceptions(exceptions))
         else:
             raise AttributeError(
@@ -101,7 +101,7 @@ class FallbackStorage(Storage):
 
         if exceptions:
             if len(exceptions) == 1:
-                raise exceptions[0]
+                raise exceptions[exceptions.keys()[0]]
             raise Exception(concatenate_exceptions(exceptions))
         else:
             return False
@@ -124,7 +124,7 @@ class FallbackStorage(Storage):
             return directories, files
         elif exceptions:
             if len(exceptions) == 1:
-                raise exceptions[0]
+                raise exceptions[exceptions.keys()[0]]
             raise Exception(concatenate_exceptions(exceptions))
         else:
             raise AttributeError("No backend found with the method `listdir`")
@@ -148,7 +148,7 @@ class FallbackStorage(Storage):
                     continue
             if exceptions:
                 if len(exceptions) == 1:
-                    raise exceptions[0]
+                    raise exceptions[exceptions.keys()[0]]
                 raise Exception(concatenate_exceptions(exceptions))
             else:
                 last_backend = get_storage_class(self.backend_classes[-1])()
@@ -186,7 +186,7 @@ class FallbackStorage(Storage):
 
             if exceptions:
                 if len(exceptions) == 1:
-                    raise exceptions[0]
+                    raise exceptions[exceptions.keys()[0]]
                 raise Exception(concatenate_exceptions(exceptions))
             else:
                 return result
